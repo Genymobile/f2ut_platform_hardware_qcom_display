@@ -44,7 +44,7 @@
 using namespace qhwc;
 using namespace overlay;
 
-#define VSYNC_DEBUG 0
+#define VSYNC_DEBUG 1
 #define POWER_MODE_DEBUG 1
 
 static int hwc_device_open(const struct hw_module_t* module,
@@ -378,6 +378,7 @@ static int hwc_setPowerMode(struct hwc_composer_device_1* dev, int dpy,
     ATRACE_CALL();
     hwc_context_t* ctx = (hwc_context_t*)(dev);
     int ret = 0, value = 0;
+   // if (mode == HWC_POWER_MODE_OFF) mode = HWC_POWER_MODE_NORMAL;
 
     Locker::Autolock _l(ctx->mDrawLock);
     /* In case of non-hybrid WFD session, we are fooling SF by
@@ -430,6 +431,8 @@ static int hwc_setPowerMode(struct hwc_composer_device_1* dev, int dpy,
         Writeback::clear();
     }
 
+ALOGE("Testing this now, plz work....");
+
     switch(dpy) {
     case HWC_DISPLAY_PRIMARY:
         if(ioctl(ctx->dpyAttr[dpy].fd, FBIOBLANK, value) < 0 ) {
@@ -446,6 +449,8 @@ static int hwc_setPowerMode(struct hwc_composer_device_1* dev, int dpy,
         }
 
         ctx->dpyAttr[dpy].isActive =  not(mode == HWC_POWER_MODE_OFF);
+
+	  ctx->dpyAttr[dpy].isActive = true;
 
         if(ctx->mVirtualonExtActive) {
             /* if mVirtualonExtActive is true, display hal will
@@ -799,6 +804,7 @@ int hwc_getDisplayAttributes(struct hwc_composer_device_1* dev, int disp,
     }
 
     for (size_t i = 0; i < NUM_DISPLAY_ATTRIBUTES - 1; i++) {
+	if (attributes[i] == HWC_DISPLAY_NO_ATTRIBUTE) break;
         switch (attributes[i]) {
         case HWC_DISPLAY_VSYNC_PERIOD:
             values[i] =
@@ -824,9 +830,11 @@ int hwc_getDisplayAttributes(struct hwc_composer_device_1* dev, int disp,
             values[i] = (int32_t) (ctx->dpyAttr[disp].secure);
             break;
         default:
-            ALOGE("Unknown display attribute %d",
-                    attributes[i]);
-            return -EINVAL;
+            ALOGE("Unknown display attribute (ignoring) %d",
+                     attributes[i]);
+            //return -EINVAL;
+            break;
+
         }
     }
     return 0;
